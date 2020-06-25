@@ -7,19 +7,25 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
 ```
 
+## 1. Read in datasets and EDA
 ```{r}
 temp <- tempfile()
 url <- "https://archive.ics.uci.edu/ml/machine-learning-databases/00332/OnlineNewsPopularity.zip"
 download.file(url=url, temp)
-news <- read_table(unz(temp, ""))
+news <- read_csv(unz(temp, "OnlineNewsPopularity/OnlineNewsPopularity.csv"))
+unlink(temp)
+# summary(news)
+anyNA(news)
+fitData <- news %>% select(-url)
+```
+Using linear regression to identify important predictors.
+```{r}
+coef <- summary(lm(shares ~ ., data =fitData))$coef
+rownames(coef[coef[,4]< 0.05,])
 ```
 
-```{r}
-temp <- tempfile()
-download.file("http://www.newcl.org/data/zipfiles/a1.zip",temp)
-data <- read.table(unz(temp, "a1.dat"))
-unlink(temp)
-```
+
 
