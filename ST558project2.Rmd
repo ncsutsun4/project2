@@ -1,0 +1,25 @@
+---
+title: "Project1"
+author: "Tao Sun"
+date: "6/25/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+temp <- tempfile()
+url <- "https://archive.ics.uci.edu/ml/machine-learning-databases/00332/OnlineNewsPopularity.zip"
+download.file(url=url, temp)
+news <- read_table(unz(temp, ""))
+```
+
+```{r}
+temp <- tempfile()
+download.file("http://www.newcl.org/data/zipfiles/a1.zip",temp)
+data <- read.table(unz(temp, "a1.dat"))
+unlink(temp)
+```
+
