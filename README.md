@@ -1,2 +1,2 @@
-# project1
-ST558 Project1
+# project2
+ST558 Project2
