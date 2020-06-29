@@ -1,30 +1,111 @@
 ---
-title: "Project1"
+title: "Project2"
 author: "Tao Sun"
 date: "6/25/2020"
-output: pdf_document
+output: rmarkdown::github_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+set.seed(1)                            # set seed for replication
+library(caret)
 ```
 
 ## 1. Read in datasets and EDA
 ```{r}
+# download data file and read in to R.
 temp <- tempfile()
 url <- "https://archive.ics.uci.edu/ml/machine-learning-databases/00332/OnlineNewsPopularity.zip"
 download.file(url=url, temp)
-news <- read_csv(unz(temp, "OnlineNewsPopularity/OnlineNewsPopularity.csv"))
+news <- read_csv(unz(temp, 'OnlineNewsPopularity/OnlineNewsPopularity.csv'))
 unlink(temp)
-# summary(news)
-anyNA(news)
-fitData <- news %>% select(-url)
+#summary(news)
+colnames(news)
+anyNA(news)             # Check missing values.
+
+# Because url and timedelta are not predictors, exclude them form the dataset.
+fitData <- news %>% select(-c(url, timedelta))
 ```
-Using linear regression to identify important predictors.
+## 2. EDA
 ```{r}
-coef <- summary(lm(shares ~ ., data =fitData))$coef
-rownames(coef[coef[,4]< 0.05,])
+# Convert factor variables to factors
+fitData$data_channel_is_lifestyle = as.factor(fitData$data_channel_is_lifestyle)
+fitData$data_channel_is_entertainment = as.factor(fitData$data_channel_is_entertainment)
+fitData$data_channel_is_bus = as.factor(fitData$data_channel_is_bus)
+fitData$data_channel_is_socmed = as.factor(fitData$data_channel_is_socmed)
+fitData$data_channel_is_tech = as.factor(fitData$data_channel_is_tech)
+fitData$data_channel_is_world = as.factor(fitData$data_channel_is_world)
+
+# plot shares histogram
+fitData %>% ggplot(aes(x=shares, y=..density..))+geom_histogram()
+# Log transform shares.
+fitData2 <- fitData %>% mutate(logShares = log(shares)) %>% select(-shares)
+fitData2 %>% ggplot(aes(x=logShares))+geom_histogram(aes(y=..density..)) +
+             stat_function(fun=dnorm, args=list(mean=mean(fitData2$logShares),
+                                                sd=sd(fitData2$logShares)),
+                           color = "red", size = 1)
+```
+
+
+
+## 3. Subset data
+```{r}
+weekday <- "monday"
+
+fitData3 <- fitData2 %>% filter(fitData[paste0("weekday_is_", weekday)]==1) %>% 
+                        select(-contains("week")) 
+                    
+index <- createDataPartition(fitData1$shares, p=0.70, list=FALSE)
+training <- fitData3[ index,]
+testing  <- fitData3[-index,]
+
+dim(fitData1); dim(training);dim(testing)
+```
+
+## 4. linear regression to identify important predictors.
+```{r}
+# fit the data in a full model with all predictors.
+lrFit <- lm(logShares ~., data =training)
+pred <- predict(lrFit, newdata = testing)
+
+selectlrFit <- step(lrFit, direction="backward", trace=1, k=2)
+predSelect <- predict(selectlrFit , newdata = testing)
+
+
+data.frame(actual = testing$logShares, predict = predSelect) %>% 
+          ggplot(aes(x=actual, y=predict)) + 
+          geom_point() + 
+          geom_abline(intercept=0, slope=1, col="red") +
+          xlim(c(0,15))+ylim(c(0,15))
+confusionMatrix(as.factor(ifelse(testing$logShares>log(1400),1,0)), 
+                as.factor(ifelse(pred> log(1400),1,0)))$overall["Accuracy"]
+
+confusionMatrix(as.factor(ifelse(testing$logShares>log(1400),1,0)), 
+                as.factor(ifelse(predSelect> log(1400),1,0)))$overall["Accuracy"]
+```
+
+## 5. Random forest model 
+```{r cache=TRUE}
+library(doParallel)
+cl <- makePSOCKcluster(7)
+registerDoParallel(cl)
+
+trControl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+
+rfModel <- train(logShares ~., data=training, 
+                 method="rf", trControl=trControl, 
+                 tuneLength=10)
+stopCluster(cl)
+rfPred<-predict(rfModel, newdata = testing, type="raw")
+
+data.frame(actual = testing$logShares, predict = rfPred) %>% 
+          ggplot(aes(x=actual, y=rfPred)) + 
+          geom_point() + 
+          geom_abline(intercept=0, slope=1, col="red") +
+          xlim(c(0,15))+ylim(c(0,15))
+confusionMatrix(as.factor(ifelse(testing$logShares>log(1400),1,0)), 
+                as.factor(ifelse(rfPred> log(1400),1,0)))
 ```
 
 
