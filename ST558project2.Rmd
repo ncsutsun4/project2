@@ -3,6 +3,8 @@ title: "Project2"
 author: "Tao Sun"
 date: "6/25/2020"
 output: rmarkdown::github_document
+params: 
+    weekday: "friday"
 ---
 
 ```{r setup, include=FALSE}
@@ -10,16 +12,25 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 set.seed(1)                            # set seed for replication
 library(caret)
+library(cowplot)
+library(doParallel)
 ```
+
+## 1. Introduction
+
+This project intend to find the best model and set of feature to predict the popularity of online news published on each weekday using linear regression and random forest models.  The data comes from <Mashable>(https://archive.ics.uci.edu/ml/datasets/Online+News+Popularity), a well-known online news website. 
+
+Subset of data from each weekday was selected and 70% of the subset was used to train models and the left 30% records were used to test the model's prediction accuracy. For linear regression, Backward selection methods was used to select significant feature in the model using AIC as criteria. For random forest model, 10 fold cross validation was used for training the mode. RMSE(residual mean squared error) were used to select the best model. Predictions of shares were. Prediction of log shares are made for the test dataset, the prediction accurate rate of shares larger than 1400 are used calcualted by two methods, Random Forest turns out to be the better model for prediction, and it can achieve an accuracy of 60% with optimal parameters. 
+
+## 2. Data variabels description
+
+The dataset has 61 variables from 39644 articles. The variables describe different aspect of the articles, like words (Number of words of the title/content, average word length, rate of unique/non-stop words of contents), links (number of links, number of links to other articles in Mashable), digital media (number of images/videos), publication time(Day of week/weekend), keywords(number of keywords, words/best/average keywords (#shares), article category), natural language processing(closeness to five LDA topics, title/text polarity/subjectivity, rate and polarity of positive/negative words, absolute subjectivity/polarity levels) and target (number of shares at Mashable). Two variables (url and timedelta) are non-predictive and are excluded.
+
 
 ## 1. Read in datasets and EDA
 ```{r}
 # download data file and read in to R.
-temp <- tempfile()
-url <- "https://archive.ics.uci.edu/ml/machine-learning-databases/00332/OnlineNewsPopularity.zip"
-download.file(url=url, temp)
-news <- read_csv(unz(temp, 'OnlineNewsPopularity/OnlineNewsPopularity.csv'))
-unlink(temp)
+news <- read_csv("OnlineNewsPopularity.csv")
 #summary(news)
 colnames(news)
 anyNA(news)             # Check missing values.
@@ -38,60 +49,82 @@ fitData$data_channel_is_tech = as.factor(fitData$data_channel_is_tech)
 fitData$data_channel_is_world = as.factor(fitData$data_channel_is_world)
 
 # plot shares histogram
-fitData %>% ggplot(aes(x=shares, y=..density..))+geom_histogram()
+p1 <- fitData %>% ggplot(aes(x=shares, y=..density..))+
+                  geom_histogram(bins=30)+ 
+                  labs(x="Number of shares", title="Histogram of Shares")
 # Log transform shares.
-fitData2 <- fitData %>% mutate(logShares = log(shares)) %>% select(-shares)
-fitData2 %>% ggplot(aes(x=logShares))+geom_histogram(aes(y=..density..)) +
-             stat_function(fun=dnorm, args=list(mean=mean(fitData2$logShares),
-                                                sd=sd(fitData2$logShares)),
-                           color = "red", size = 1)
+fitData1 <- fitData %>% mutate(logShares = log(shares)) %>% select(-shares)
+
+p2 <- fitData1 %>% ggplot(aes(x=logShares))+geom_histogram(aes(y=..density..), bins = 30) +
+             stat_function(fun=dnorm, args=list(mean=mean(fitData1$logShares),
+                                                sd=sd(fitData1$logShares)),
+                           color = "red", size = 1) +
+            labs(x="Number of logShares", title="Histogram of Shares")
+
+plot_grid(p1, p2, labels = "AUTO")
 ```
+The share variable is severely left skewed, the log transformation seems fit normal distribuion, so use log transformed shares as depenedent variable.
 
 
-
-## 3. Subset data
+## 3. Split data into training and testing datasets.
 ```{r}
-weekday <- "monday"
-
-fitData3 <- fitData2 %>% filter(fitData[paste0("weekday_is_", weekday)]==1) %>% 
+# Subset week_day_is_* data and remove weekday_is_* and is_weekend variables
+fitData2 <- fitData1 %>% filter(fitData[paste0("weekday_is_", params$weekday)]==1) %>% 
                         select(-contains("week")) 
-                    
-index <- createDataPartition(fitData1$shares, p=0.70, list=FALSE)
-training <- fitData3[ index,]
-testing  <- fitData3[-index,]
 
-dim(fitData1); dim(training);dim(testing)
+# Create subset data index and taining and testing datasets.     
+index <- createDataPartition(fitData2$logShares, p=0.70, list=FALSE)
+training <- fitData2[ index,]
+testing  <- fitData2[-index,]
+
+dim(fitData1); dim(training);dim(testing) # Check datasets dimentions
 ```
 
-## 4. linear regression to identify important predictors.
+## 4. Linear regression fit and model selection
 ```{r}
-# fit the data in a full model with all predictors.
-lrFit <- lm(logShares ~., data =training)
-pred <- predict(lrFit, newdata = testing)
+# Fit the data in a full model with all predictors.
+fullModel <- lm(logShares ~., data =training)
+pred <- predict(fullModel, newdata = testing)
 
-selectlrFit <- step(lrFit, direction="backward", trace=1, k=2)
-predSelect <- predict(selectlrFit , newdata = testing)
+# To select better linear regression model with AIC as selection criteria.
+redModel <- step(fullModel, direction="backward", trace=1, k=2)
+
+# Using the selected linear regression model to predict logShare in testing dataset.
+predSelect <- predict(redModel , newdata = testing)
 
 
+
+anova(fullModel, redModel) 
+# p-value is larger, there is no evidence that those dropped variables is significant.
+# Choose the reduced model.
+
+# Scatter plot to show the prediction and actural logShares values.
 data.frame(actual = testing$logShares, predict = predSelect) %>% 
           ggplot(aes(x=actual, y=predict)) + 
           geom_point() + 
           geom_abline(intercept=0, slope=1, col="red") +
           xlim(c(0,15))+ylim(c(0,15))
+
+# Using cutoff of 1400 shares, as high shares and low shares articals
+# Compute the prediction accurate rate using confusion matrix.
+
+# Prediction accurate rate with full linear regression model
 confusionMatrix(as.factor(ifelse(testing$logShares>log(1400),1,0)), 
                 as.factor(ifelse(pred> log(1400),1,0)))$overall["Accuracy"]
 
+# prediction accruate rate with selected linear regression model.
 confusionMatrix(as.factor(ifelse(testing$logShares>log(1400),1,0)), 
                 as.factor(ifelse(predSelect> log(1400),1,0)))$overall["Accuracy"]
 ```
 
 ## 5. Random forest model 
-```{r cache=TRUE}
-library(doParallel)
+```{r, cache=TRUE}
 cl <- makePSOCKcluster(7)
 registerDoParallel(cl)
 
-trControl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+#trControl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+
+trControl <- trainControl(method = "repeatedcv", number = 3, repeats = 1)
 
 rfModel <- train(logShares ~., data=training, 
                  method="rf", trControl=trControl, 
