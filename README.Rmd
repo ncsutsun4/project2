@@ -1,0 +1,42 @@
+---
+title: "README"
+author: "Tao Sun"
+date: "6/30/2020"
+output: rmarkdown::github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+knitr::kable(resultSummary)
+
+# plot the prediction accurate rate for different weekday 
+plotResult <- resultSummary[c(5,7),] %>%  gather(key="Weekday", value = "Prediction Accuracy", 2:8)
+
+ggplot(data=plotResult, aes(x=Weekday, y=`Prediction Accuracy`, group=Stats)) + 
+  geom_line(aes(col=Stats)) +
+  geom_point() +
+  theme(legend.position = "top")
+```
+
+
+```{r automation, eval=FALSE, echo=FALSE, include=FALSE}
+# To produce md output automatically.-- need run this chunck manually
+
+# Create weekday parameter
+weekdays <- c("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+
+# Create knitr automation parameter and out file names and put into a tibble
+output_file <- paste0(weekdays, ".md")
+params <- lapply(weekdays, FUN = function(x){list(weekday=x)})
+reports <- tibble(output_file, params)
+
+# Knit file and create reports automatically
+apply(reports, MARGIN=1, 
+      FUN=function(x){  # x[[1]] since tibble does not simplify.
+        rmarkdown::render(input = "ST558project2.Rmd", output_file = x[[1]], params = x[[2]])
+      })
+```
+

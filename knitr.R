@@ -1,21 +1,16 @@
 
-# To produce html output automatically.
+# To produce md output automatically.
 
-
+# Create weekday parameter
 weekdays <- c("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
-output_file <- paste0(weekdays, ".html")
-params <- lapply(weekdays, FUN = function(x){list(weekday=x)})
 
+# Create knitr automation parameter and out file names and put into a tibble
+output_file <- paste0(weekdays, ".md")
+params <- lapply(weekdays, FUN = function(x){list(weekday=x)})
 reports <- tibble(output_file, params)
 
-# tibble is really flexible, params column actually each is a list.
-#reports <- tibble(output_file, params=teamID)
-
-
-
-library(rmarkdown)
-# need to use x[[1]] to get at elememets since tibble doesn't simplify
+# Knit file and create reports automatically
 apply(reports, MARGIN=1, 
       FUN=function(x){  # x[[1]] since tibble does not simplify.
-        render(input = "ST558project2.Rmd", output_file = x[[1]], params = x[[2]])
+        rmarkdown::render(input = "ST558project2.Rmd", output_file = x[[1]], params = x[[2]])
       })
