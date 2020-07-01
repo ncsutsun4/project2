@@ -3,7 +3,7 @@ Project2
 Tao Sun
 6/25/2020
 
-# SATURDAY ANALYSIS OUTPUT
+# MODEL SELECTION AND PREDICTION WITH SATURDAY DATA
 
 ## 1\. Introduction
 
@@ -44,7 +44,7 @@ absolute subjectivity/polarity levels) and the target (`shares`-number
 of shares at Mashable). Two variables (`url` and `timedelta`) are
 non-predictive and are excluded in the models.
 
-## 1\. Read in datasets
+## 1\. Read in dataset
 
 ``` r
 # download data file and read in to R.
@@ -63,7 +63,7 @@ fitData <- news %>% select(-c(url, timedelta))
 
 As the website described, the data set does not contain any `NA`.
 
-## 2\. EDA
+## 2\. Exploratory data analysis
 
 ``` r
 # Convert factor variables to factors
@@ -129,7 +129,7 @@ ggplot(data=plotDay, aes(x=weekday, y=Count, fill=Popularity)) +
 
 ![](ST558project2_files/figure-gfm/weekdayCount-1.png)<!-- -->
 
-Indeed, we see different trend of popular news counts or ratios over
+Indeed, we see different trends of popular news counts or ratios over
 different days of a week. Those features are truly related to the
 popularity of news. It is reasonable to subset records for each weekday
 for training prediction models to see whether bettr prediction can be
@@ -201,10 +201,10 @@ ggplot(data=plotChannel, aes(x=Channel, y=Count, fill=Popularity)) +
 ## 4\. Linear regression model selection
 
 For linear regression, I first fit a **full model** with all predictor
-features included, then a backward step-wise selection method (step
-function) is going to be used to select important features in the
-**reduced model** using **AIC** as the major selection criterion. Also,
-**adjusted R square, AICc, BIC** from two models are also listed.
+features included, then use the backward step-wise selection method
+(step function) to select important features in the **reduced model**
+using **AIC** as the major selection criterion. Also, **adjusted R
+square, AICc, BIC** from two models are also listed.
 
 ``` r
 # Fit the data in a full model with all predictors.
@@ -239,7 +239,7 @@ compareFitStats(fullModel, redModel)
 The **larger adjusted \(R^2\) and smaller, AICc and BIC** also indicate
 the reduced model is better, choose the reduced model for prediction.
 
-The reduced model have 18 predictors which include features
+The reduced model have **18** predictors which include features:
 n\_tokens\_content, n\_unique\_tokens, n\_non\_stop\_words,
 num\_self\_hrefs, average\_token\_length, data\_channel\_is\_bus,
 data\_channel\_is\_tech, kw\_max\_min, kw\_avg\_min, kw\_avg\_avg,
@@ -248,12 +248,13 @@ self\_reference\_avg\_sharess, LDA\_00, LDA\_03,
 global\_rate\_negative\_words, rate\_positive\_words,
 max\_negative\_polarity .
 
+Using the selected linear regression model to predict share in testing
+dataset and the scatter plot of predicted logShares and the observed
+logShares seem correlates to each other fairly well.
+
 ``` r
-# Using the selected linear regression model to predict share in testing dataset.
-#lmFullPpred <- exp(predict(fullModel, newdata = testing))
 lmRedPred <- exp(predict(redModel , newdata = testing))
 
-# Scatter plot to show the prediction and actual logShares values.
 data.frame(actual = testing$logShares, predict = log(lmRedPred)) %>% 
           ggplot(aes(x=actual, y=predict)) + 
           geom_point() + 
@@ -263,9 +264,12 @@ data.frame(actual = testing$logShares, predict = log(lmRedPred)) %>%
 
 ![](ST558project2_files/figure-gfm/linearModel_Prediction-1.png)<!-- -->
 
+To better compare the prediction accuracy, cutoff of 1400 shares was
+chosen to divide artices as popular and unpopular ones. Popularity
+prediction accurate rate with selected linear regression model was
+calculated using confusion matrix.
+
 ``` r
-# Using cutoff of 1400 shares, as high shares and low shares articles
-# prediction accruate rate with selected linear regression model using confusion matrix.
 lmPredAccRate <- confusionMatrix(as.factor(ifelse(testing$logShares>log(1400),1,0)), 
                 as.factor(ifelse(log(lmRedPred) > log(1400),1,0)))$overall["Accuracy"]
 lmPredAccRate
@@ -274,7 +278,14 @@ lmPredAccRate
     ##  Accuracy 
     ## 0.6961853
 
+For the reduced linear regression model, the prediction accurate rate is
+0.6961853 with saturday data.
+
 ## 5\. Random forest model
+
+For random forest, `caret` package was used. 10 fold cross-validation
+was used to train the model, *RMSE* is used for the model selection
+criterion.
 
 ``` r
 cl <- makePSOCKcluster(7)  # Use parallel computing
@@ -327,7 +338,9 @@ plot(rfModel)
 plot(rfModel$finalModel)
 ```
 
-![](ST558project2_files/figure-gfm/randomForest-2.png)<!-- -->
+![](ST558project2_files/figure-gfm/randomForest-2.png)<!-- --> The final
+model selected from the random forest methods has 18 mTry which is the
+number of variables available for splitting at each tree node.
 
 ``` r
 # Predict with testing dataset.
@@ -341,7 +354,7 @@ data.frame(actual = testing$logShares, predict = log(rfPred)) %>%
           xlim(c(0,15))+ylim(c(0,15))
 ```
 
-![](ST558project2_files/figure-gfm/randomForest-3.png)<!-- -->
+![](ST558project2_files/figure-gfm/rfprediction-1.png)<!-- -->
 
 ``` r
 # Using cutoff of 1400 shares, as high shares and low shares articles
@@ -353,6 +366,10 @@ rfPredAccRate
 
     ##  Accuracy 
     ## 0.7138965
+
+Scatter plot of predicted logShares and the observed logShares shows
+fairly good correlation. For the random forest model, the prediction
+accurate rate is 0.7138965 with saturday data.
 
 ## 6\. Compare two models
 
