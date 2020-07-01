@@ -7,19 +7,28 @@ Random Forest model turns out to be the better model for prediction most
 of the time except to data from Sunday, and it can achieve an accuracy
 of 60% with optimal parameters here.
 
-The analysis for [Monday is available here](MondayAnalysis.md). The
-analysis for [Tuesday is available here](TuesdayAnalysis.md). The
-analysis for [Wednesdayu is available here](WednesdayAnalysis.md). The
-analysis for [Thursday is available here](ThursdayAnalysis.md). The
-analysis for [Friday is available here](FridayAnalysis.md). The analysis
-for [Saturday is available here](SaturdayAnalysis.md). The analysis for
-[Sunday is available here](SundayAnalysis.md).
+The analysis for [Monday is available here](MondayAnalysis.md).
+
+The analysis for [Tuesday is available here](TuesdayAnalysis.md).
+
+The analysis for [Wednesdayu is available here](WednesdayAnalysis.md).
+
+The analysis for [Thursday is available here](ThursdayAnalysis.md).
+
+The analysis for [Friday is available here](FridayAnalysis.md).
+
+The analysis for [Saturday is available here](SaturdayAnalysis.md).
+
+The analysis for [Sunday is available here](SundayAnalysis.md).
 
 The project [Rmd file is here](ST558project2.Rmd)
 
 Code for Automation is in blow chunk. A table with some selected
-parameters are listed in below table, and the prediction accurate rate
-from two model is also compared in the plot.
+parameters are listed in below table, weekend’s data prediction is more
+accurate and also generally need less predictors and mTry.
+
+The prediction accurate rate from two model is also compared in the
+plot.
 
 ``` r
 # To produce md output automatically - Need press "run current chunk".
@@ -94,4 +103,4 @@ ggplot(data=plotResult, aes(x=Weekday, y=`Prediction Accuracy`, group=Stats)) +
   labs(title="The prediction accurate rate of two selected model in weekdays")
 ```
 
-![](Knit_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
+![](Knit_files/figure-gfm/unnamed-chunk-1-1.png)<!-- -->
