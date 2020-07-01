@@ -23,9 +23,11 @@ The analysis for [Sunday is available here](SundayAnalysis.md).
 
 The project [Rmd file is here](ST558project2.Rmd)
 
-Code for Automation is in blow chunk. A table with some selected
-parameters are listed in below table, weekend’s data prediction is more
-accurate and also generally need less predictors and mTry.
+The R code for [automation is here](knitr.R) or run blow chunk R code.
+
+A table with some selected parameters are listed in below table,
+weekend’s data prediction is more accurate and also generally need
+less predictors and mTry.
 
 The prediction accurate rate from two model is also compared in the
 plot.
@@ -104,3 +106,7 @@ ggplot(data=plotResult, aes(x=Weekday, y=`Prediction Accuracy`, group=Stats)) +
 ```
 
 ![](Knit_files/figure-gfm/unnamed-chunk-1-1.png)<!-- -->
+
+``` r
+#rmarkdown::render("Knit.Rmd", "github_document")
+```
