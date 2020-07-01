@@ -1,7 +1,7 @@
 Project2
 ================
 Tao Sun
-6/25/2020
+2020-07-01
 
 # MODEL SELECTION AND PREDICTION WITH THURSDAY DATA
 

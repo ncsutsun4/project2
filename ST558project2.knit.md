@@ -1,7 +1,7 @@
 ---
 title: "Project2"
 author: "Tao Sun"
-date: "6/25/2020"
+date: "2020-07-01"
 output: rmarkdown::github_document
 params: 
     weekday: "Monday"
